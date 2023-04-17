@@ -3,12 +3,14 @@ import cors from 'cors';
 import { MongoClient } from 'mongodb';
 import dotenv from 'dotenv';
 import joi from 'joi';
+import dayjs from 'dayjs';
 
 // Configs:
 const app = express();
 app.use(cors());
 app.use(json());
 dotenv.config();
+dayjs().format();
 
 // DataBase:
 const mongoClient = new MongoClient(process.env.DATABASE_URL);
@@ -22,8 +24,36 @@ const db = mongoClient.db();
 
 // EndPoints:
 app.post('/participants', async (req, res) => {
+    const { name } = req.body;
+
+    const participantSchema = joi.object({
+        name: joi.string().required()
+    })
+    const validation = participantSchema.validate(req.body, { abortEarly: false })
+    if (validation.error) {
+        const errors = validation.error.details.map(detail => detail.message)
+        return res.status(422).send(errors);
+    }
+
     try {
-        res.send(200);
+        const participant = await db.collection('participants').findOne({ name });
+        if (participant) { return res.sendStatus(409) }
+
+        const now = dayjs();
+        await db.collection("receitas").insertOne({ name, lastStatus: now });
+
+        const time = now.format('HH:mm:ss');
+        await db.collection("messages").insertOne(
+            {
+                from: name,
+                to: 'Todos',
+                text: 'entra na sala...',
+                type: 'status',
+                time
+            }
+        );
+
+        res.sendStatus(201);
     } catch (err) {
         res.status(500).send(err.message);
     }
