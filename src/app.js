@@ -121,8 +121,15 @@ app.get('/messages', async (req, res) => {
 });
 
 app.post('/status', async (req, res) => {
+    const user = req.headers.user;
+    if (!user) { return res.sendStatus(404)}
     try {
-        res.send(200);
+        const participant = await db.collection('participants').findOne({ name: user });
+        if (!participant) { return res.sendStatus(404) }
+
+        await db.collection('participants')
+            .updateOne({ _id: participant._id }, { $set: { name: user, lastStatus: Date.now() } })
+        res.sendStatus(200);
     } catch (err) {
         res.status(500).send(err.message);
     }
@@ -130,7 +137,7 @@ app.post('/status', async (req, res) => {
 
 app.delete('/messages/:id', async (req, res) => {
     try {
-        res.send(200);
+        res.sendStatus(200);
     } catch (err) {
         res.status(500).send(err.message);
     }
@@ -138,7 +145,7 @@ app.delete('/messages/:id', async (req, res) => {
 
 app.put('/messages/:id', async (req, res) => {
     try {
-        res.send(200);
+        res.sendStatus(200);
     } catch (err) {
         res.status(500).send(err.message);
     }
