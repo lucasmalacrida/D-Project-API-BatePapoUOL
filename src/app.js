@@ -122,7 +122,7 @@ app.get('/messages', async (req, res) => {
 
 app.post('/status', async (req, res) => {
     const user = req.headers.user;
-    if (!user) { return res.sendStatus(404)}
+    if (!user) { return res.sendStatus(404) }
     try {
         const participant = await db.collection('participants').findOne({ name: user });
         if (!participant) { return res.sendStatus(404) }
@@ -153,28 +153,29 @@ app.put('/messages/:id', async (req, res) => {
 
 // Remoção Automática de Usuários Inativos
 let idInterval;
-function startClock(){
+function startClock() {
     idInterval = setInterval(refreshTime, 15000);
 }
-async function refreshTime(){
+async function refreshTime(req,res) {
     const now = Date.now();
     try {
-        const participant = await db.collection('participants').findOne({ lastStatus })
-        await db.collection('participants').deleteOne({ _id: participant._id });
+        const participants = await db.collection('participants').find({ lastStatus: { $lte: now - 10000 } }).toArray();
+        if (participants.length>0) {
+            await db.collection('participants').deleteMany({ lastStatus: { $lte: now - 10000 } });
 
-        const time = dayjs().format('HH:mm:ss');
-        await db.collection('messages').insertOne(
-            {
-                from: participant.name,
-                to: 'Todos',
-                text: 'sai da sala...',
-                type: 'status',
-                time
-            }
-        );
-
+            const time = dayjs().format('HH:mm:ss');
+            await db.collection('messages').insertMany(
+                participants.map(p => ({
+                    from : p.name,
+                    to : 'Todos',
+                    text: 'sai da sala...',
+                    type: 'status',
+                    time
+                }))
+            );
+        }
     } catch (err) {
-        res.status(500).send(err.message);
+        console.log(err.message);
     }
 }
 
