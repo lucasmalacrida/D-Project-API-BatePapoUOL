@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { json } from 'express';
 import cors from 'cors';
 import { MongoClient } from 'mongodb';
 import dotenv from 'dotenv';
@@ -11,14 +11,71 @@ app.use(json());
 dotenv.config();
 
 // DataBase:
-let db;
 const mongoClient = new MongoClient(process.env.DATABASE_URL);
-mongoClient.connect()
-    .then(() => { db = mongoClient.db() })
-    .catch((err) => console.log(err.message));
+try {
+    await mongoClient.connect();
+    console.log('MongoDB Connected!');
+} catch (err) {
+    console.log(err.message);
+}
+const db = mongoClient.db();
 
 // EndPoints:
+app.post('/participants', async (req, res) => {
+    try {
+        res.send(200);
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+});
 
+app.get('/participants', async (req, res) => {
+    try {
+        res.send(200);
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+});
+
+app.post('/messages', async (req, res) => {
+    try {
+        res.send(200);
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+});
+
+app.get('/messages', async (req, res) => {
+    try {
+        res.send(200);
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+});
+
+app.post('/status', async (req, res) => {
+    try {
+        res.send(200);
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+});
+
+app.delete('/messages/:id', async (req, res) => {
+    try {
+        res.send(200);
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+});
+
+app.put('/messages/:id', async (req, res) => {
+    try {
+        res.send(200);
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+});
 
 // Run Server:
 const PORT = 5000;
