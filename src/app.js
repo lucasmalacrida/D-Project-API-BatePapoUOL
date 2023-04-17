@@ -39,17 +39,16 @@ app.post('/participants', async (req, res) => {
         const participant = await db.collection('participants').findOne({ name });
         if (participant) { return res.sendStatus(409) }
 
-        const now = dayjs();
-        await db.collection("receitas").insertOne({ name, lastStatus: now });
-
-        const time = now.format('HH:mm:ss');
+        const now = Date.now();
+        const time = dayjs().format('HH:mm:ss');
+        await db.collection('participants').insertOne({ name, lastStatus: now });
         await db.collection("messages").insertOne(
             {
                 from: name,
                 to: 'Todos',
                 text: 'entra na sala...',
                 type: 'status',
-                time
+                time: time
             }
         );
 
@@ -86,9 +85,9 @@ app.post('/messages', async (req, res) => {
     try {
         const participant = await db.collection('participants').findOne({ name: user });
         if (!participant) { return res.sendStatus(422) }
-        
-        const time = now.format('HH:mm:ss');
-        await db.collection("messages").insertOne(
+
+        const time = dayjs().format('HH:mm:ss');
+        await db.collection('messages').insertOne(
             {
                 from: user,
                 to,
@@ -97,15 +96,25 @@ app.post('/messages', async (req, res) => {
                 time
             }
         );
-        res.send(201);
+        res.sendStatus(201);
     } catch (err) {
         res.status(500).send(err.message);
     }
 });
 
 app.get('/messages', async (req, res) => {
+    const user = req.headers.user;
+    const limit = Number(req.query.limit);
     try {
-        res.send(200);
+        const messages = await db.collection('messages').find({ $or: [{ from: user }, { to: user }, { to: 'Todos' }] }).toArray();
+        if (limit) {
+            if (Number.isInteger(limit) && limit >= 1) {
+                return res.send(messages.slice(-limit));
+            } else {
+                return res.sendStatus(422);
+            }
+        }
+        res.send(messages);
     } catch (err) {
         res.status(500).send(err.message);
     }
