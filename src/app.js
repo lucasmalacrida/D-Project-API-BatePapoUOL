@@ -151,8 +151,36 @@ app.put('/messages/:id', async (req, res) => {
     }
 });
 
+// Remoção Automática de Usuários Inativos
+let idInterval;
+function startClock(){
+    idInterval = setInterval(refreshTime, 15000);
+}
+async function refreshTime(){
+    const now = Date.now();
+    try {
+        const participant = await db.collection('participants').findOne({ lastStatus })
+        await db.collection('participants').deleteOne({ _id: participant._id });
+
+        const time = dayjs().format('HH:mm:ss');
+        await db.collection('messages').insertOne(
+            {
+                from: participant.name,
+                to: 'Todos',
+                text: 'sai da sala...',
+                type: 'status',
+                time
+            }
+        );
+
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+}
+
 // Run Server:
 const PORT = 5000;
 app.listen(PORT, () => {
+    startClock();
     console.log(`Running server on http://localhost:${PORT}`);
 });
