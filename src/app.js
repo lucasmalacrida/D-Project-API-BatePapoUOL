@@ -25,7 +25,7 @@ const db = mongoClient.db();
 
 // EndPoints:
 app.post('/participants', async (req, res) => {
-    const name = stripHtml(req.body.name.trim()).result;
+    const name = req.body.name;
 
     const participantSchema = joi.object({
         name: joi.string().required()
@@ -37,15 +37,16 @@ app.post('/participants', async (req, res) => {
     }
 
     try {
-        const participant = await db.collection('participants').findOne({ name });
+        const nameClean = stripHtml(name.trim()).result;
+        const participant = await db.collection('participants').findOne({ nameClean });
         if (participant) { return res.sendStatus(409) }
 
         const now = Date.now();
         const time = dayjs().format('HH:mm:ss');
-        await db.collection('participants').insertOne({ name, lastStatus: now });
+        await db.collection('participants').insertOne({ nameClean, lastStatus: now });
         await db.collection("messages").insertOne(
             {
-                from: name,
+                from: nameClean,
                 to: 'Todos',
                 text: 'entra na sala...',
                 type: 'status',
@@ -70,9 +71,7 @@ app.get('/participants', async (req, res) => {
 
 app.post('/messages', async (req, res) => {
     const user = req.headers.user;
-    const to = stripHtml(req.body.to.trim()).result;
-    const text = stripHtml(req.body.text.trim()).result;
-    const type = stripHtml(req.body.type.trim()).result;
+    const { to, text, type } = req.body;
 
     const messageSchema = joi.object({
         to: joi.string().required(),
@@ -93,9 +92,9 @@ app.post('/messages', async (req, res) => {
         await db.collection('messages').insertOne(
             {
                 from: user,
-                to,
-                text,
-                type,
+                to : stripHtml(to.trim()).result,
+                text : stripHtml(text.trim()).result,
+                type : stripHtml(type.trim()).result,
                 time
             }
         );
