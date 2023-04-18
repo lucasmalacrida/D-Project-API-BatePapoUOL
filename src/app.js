@@ -104,16 +104,19 @@ app.post('/messages', async (req, res) => {
 
 app.get('/messages', async (req, res) => {
     const user = req.headers.user;
-    const limit = Number(req.query.limit);
+    const limit = req.query.limit;
     try {
         const messages = await db.collection('messages').find({ $or: [{ from: user }, { to: user }, { to: 'Todos' }] }).toArray();
+
         if (limit) {
-            if (Number.isInteger(limit) && limit >= 1) {
-                return res.send(messages.slice(-limit));
+            const numLimit = Number(limit);
+            if (Number.isInteger(numLimit) && numLimit >= 1) {
+                return res.send(messages.slice(-numLimit));
             } else {
                 return res.sendStatus(422);
             }
         }
+
         res.send(messages);
     } catch (err) {
         res.status(500).send(err.message);
@@ -151,7 +154,7 @@ app.put('/messages/:id', async (req, res) => {
     }
 });
 
-// Remoção Automática de Usuários Inativos
+// Remoção Automática de Usuários Inativos:
 let idInterval;
 function startClock() {
     idInterval = setInterval(refreshTime, 15000);
