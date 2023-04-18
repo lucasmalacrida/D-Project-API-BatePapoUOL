@@ -38,12 +38,12 @@ app.post('/participants', async (req, res) => {
 
     try {
         const nameClean = stripHtml(name.trim()).result;
-        const participant = await db.collection('participants').findOne({ nameClean });
+        const participant = await db.collection('participants').findOne({ name: nameClean });
         if (participant) { return res.sendStatus(409) }
 
         const now = Date.now();
         const time = dayjs().format('HH:mm:ss');
-        await db.collection('participants').insertOne({ nameClean, lastStatus: now });
+        await db.collection('participants').insertOne({ name: nameClean, lastStatus: now });
         await db.collection("messages").insertOne(
             {
                 from: nameClean,
@@ -92,9 +92,9 @@ app.post('/messages', async (req, res) => {
         await db.collection('messages').insertOne(
             {
                 from: user,
-                to : stripHtml(to.trim()).result,
-                text : stripHtml(text.trim()).result,
-                type : stripHtml(type.trim()).result,
+                to: stripHtml(to.trim()).result,
+                text: stripHtml(text.trim()).result,
+                type: stripHtml(type.trim()).result,
                 time
             }
         );
@@ -158,7 +158,38 @@ app.delete('/messages/:id', async (req, res) => {
 });
 
 app.put('/messages/:id', async (req, res) => {
+    const id = req.params.id;
+    const user = req.headers.user;
+    const { to, text, type } = req.body;
+
+    const messageSchema = joi.object({
+        to: joi.string().required(),
+        text: joi.string().required(),
+        type: joi.string().required().valid('message', 'private_message')
+    });
+    const validation = messageSchema.validate(req.body, { abortEarly: false });
+    if (validation.error) {
+        const errors = validation.error.details.map(detail => detail.message);
+        return res.status(422).send(errors);
+    }
+
     try {
+        const participant = await db.collection('participants').findOne({ name: user });
+        if (!participant) { return res.sendStatus(422) }
+
+        const message = await db.collection('messages').findOne({ _id: new ObjectId(id) });
+        if (!message) { return res.sendStatus(404) }
+        if (message.from !== user) { return res.sendStatus(401) }
+
+        // const time = dayjs().format('HH:mm:ss');
+        const result = await db.collection('messages').updateOne({ _id: new ObjectId(id) }, { $set:
+            {
+                to: stripHtml(to.trim()).result,
+                text: stripHtml(text.trim()).result,
+                type: stripHtml(type.trim()).result
+            } });
+        if (result.matchedCount === 0) { return res.sendStatus(404) }
+
         res.sendStatus(200);
     } catch (err) {
         res.status(500).send(err.message);
