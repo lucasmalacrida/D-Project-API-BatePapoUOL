@@ -1,6 +1,6 @@
 import express, { json } from 'express';
 import cors from 'cors';
-import { MongoClient } from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
 import dotenv from 'dotenv';
 import joi from 'joi';
 import dayjs from 'dayjs';
@@ -142,8 +142,17 @@ app.post('/status', async (req, res) => {
 });
 
 app.delete('/messages/:id', async (req, res) => {
+    const user = req.headers.user;
+    const id = req.params.id;
+
     try {
-        res.sendStatus(200);
+        const message = await db.collection('messages').findOne({ _id: new ObjectId(id) });
+        if (!message) { return res.sendStatus(404) }
+        if (message.from !== user) { return res.sendStatus(401) }
+
+        const result = await db.collection('messages').deleteOne({ _id: new ObjectId(id) });
+        if (result.deletedCount === 0) { return res.sendStatus(404) }
+        return res.sendStatus(200);
     } catch (err) {
         res.status(500).send(err.message);
     }
@@ -162,18 +171,18 @@ let idInterval;
 function startClock() {
     idInterval = setInterval(refreshTime, 15000);
 }
-async function refreshTime(req,res) {
+async function refreshTime(req, res) {
     const now = Date.now();
     try {
         const participants = await db.collection('participants').find({ lastStatus: { $lte: now - 10000 } }).toArray();
-        if (participants.length>0) {
+        if (participants.length > 0) {
             await db.collection('participants').deleteMany({ lastStatus: { $lte: now - 10000 } });
 
             const time = dayjs().format('HH:mm:ss');
             await db.collection('messages').insertMany(
                 participants.map(p => ({
-                    from : p.name,
-                    to : 'Todos',
+                    from: p.name,
+                    to: 'Todos',
                     text: 'sai da sala...',
                     type: 'status',
                     time
