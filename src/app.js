@@ -1,3 +1,4 @@
+// Imports:
 import express, { json } from 'express';
 import cors from 'cors';
 import { MongoClient, ObjectId } from 'mongodb';
@@ -228,5 +229,5 @@ async function refreshTime(req, res) {
 const PORT = 5000;
 app.listen(PORT, () => {
     startClock();
-    console.log(`Running server on http://localhost:${PORT}`);
+    console.log(`Running server on localhost:${PORT}`);
 });
